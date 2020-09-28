@@ -18,6 +18,7 @@ const (
 	two       = 2
 )
 
+// CaptureData contains the standard input streams to capture data
 type CaptureData struct {
 	BackupStdout   *os.File
 	WriterStdout   *os.File
@@ -26,6 +27,7 @@ type CaptureData struct {
 	WaitFinishRead *sync.WaitGroup
 }
 
+// StartCapture starts capturing data
 func StartCapture(writeLocker sync.Locker, stdout, stderr *strings.Builder) *CaptureData {
 	rStdout, wStdout, errStdout := os.Pipe()
 	if errStdout != nil {
@@ -91,6 +93,7 @@ func StartCapture(writeLocker sync.Locker, stdout, stderr *strings.Builder) *Cap
 	return c
 }
 
+// StopCapture stops capturing data
 func StopCapture(c *CaptureData) {
 	_ = c.WriterStdout.Close()
 	_ = c.WriterStderr.Close()
