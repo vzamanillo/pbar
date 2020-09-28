@@ -12,6 +12,7 @@ import (
 	"github.com/projectdiscovery/gologger"
 	"github.com/vbauerster/mpb/v5"
 	"github.com/vbauerster/mpb/v5/decor"
+	"github.com/vzamanillo/pbar/internal/progress"
 )
 
 const (
@@ -41,7 +42,7 @@ type Progress struct {
 	colorizer  *aurora.Aurora
 
 	renderChan         chan time.Time
-	captureData        *captureData
+	captureData        *progress.CaptureData
 	stdCaptureMutex    *sync.Mutex
 	stdOut             *strings.Builder
 	stdErr             *strings.Builder
@@ -53,7 +54,7 @@ type Progress struct {
 // NewProgress creates and returns a new progress tracking object.
 func NewProgress(colorizer aurora.Aurora, active bool) IProgress {
 	if !active {
-		return &NoOpProgress{}
+		return &progress.NoOpProgress{}
 	}
 
 	refreshMillis := int64(1. / float64(refreshHz) * mili)
@@ -98,7 +99,7 @@ func (p *Progress) InitProgressbar(hostCount int64, rulesCount int, requestCount
 	p.bar = p.setupProgressbar("["+barName+"]", requestCount, 0)
 
 	// creates r/w pipes and divert stdout/stderr writers to them and start capturing their output
-	p.captureData = startCapture(p.stdCaptureMutex, p.stdOut, p.stdErr)
+	p.captureData = progress.StartCapture(p.stdCaptureMutex, p.stdOut, p.stdErr)
 
 	// starts rendering both the progressbar and the captured stdout/stderr data
 	p.renderStdData()
@@ -137,7 +138,7 @@ func (p *Progress) Wait() {
 	p.progress.Wait()
 
 	// close the writers and wait for the EOF condition
-	stopCapture(p.captureData)
+	progress.StopCapture(p.captureData)
 
 	// stop the renderer and wait for it
 	p.stdStopRenderEvent <- true
@@ -171,8 +172,8 @@ func (p *Progress) renderStdData() {
 					hasOutput := hasStdout || hasStderr
 
 					if hasOutput {
-						stdout := p.captureData.backupStdout
-						stderr := p.captureData.backupStderr
+						stdout := p.captureData.BackupStdout
+						stderr := p.captureData.BackupStderr
 
 						// go back one line and clean it all
 						fmt.Fprint(stderr, "\u001b[1A\u001b[2K")

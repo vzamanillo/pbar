@@ -1,4 +1,4 @@
-package pbar
+package progress
 
 /**
   Inspired by the https://github.com/PumpkinSeed/cage module
@@ -18,15 +18,15 @@ const (
 	two       = 2
 )
 
-type captureData struct {
-	backupStdout   *os.File
-	writerStdout   *os.File
-	backupStderr   *os.File
-	writerStderr   *os.File
-	waitFinishRead *sync.WaitGroup
+type CaptureData struct {
+	BackupStdout   *os.File
+	WriterStdout   *os.File
+	BackupStderr   *os.File
+	WriterStderr   *os.File
+	WaitFinishRead *sync.WaitGroup
 }
 
-func startCapture(writeLocker sync.Locker, stdout, stderr *strings.Builder) *captureData {
+func StartCapture(writeLocker sync.Locker, stdout, stderr *strings.Builder) *CaptureData {
 	rStdout, wStdout, errStdout := os.Pipe()
 	if errStdout != nil {
 		panic(errStdout)
@@ -37,18 +37,18 @@ func startCapture(writeLocker sync.Locker, stdout, stderr *strings.Builder) *cap
 		panic(errStderr)
 	}
 
-	c := &captureData{
-		backupStdout: os.Stdout,
-		writerStdout: wStdout,
+	c := &CaptureData{
+		BackupStdout: os.Stdout,
+		WriterStdout: wStdout,
 
-		backupStderr: os.Stderr,
-		writerStderr: wStderr,
+		BackupStderr: os.Stderr,
+		WriterStderr: wStderr,
 
-		waitFinishRead: &sync.WaitGroup{},
+		WaitFinishRead: &sync.WaitGroup{},
 	}
 
-	os.Stdout = c.writerStdout
-	os.Stderr = c.writerStderr
+	os.Stdout = c.WriterStdout
+	os.Stderr = c.WriterStderr
 
 	stdCopy := func(builder *strings.Builder, reader *os.File, waitGroup *sync.WaitGroup) {
 		r := bufio.NewReader(reader)
@@ -83,20 +83,20 @@ func startCapture(writeLocker sync.Locker, stdout, stderr *strings.Builder) *cap
 		}
 	}
 
-	c.waitFinishRead.Add(two)
+	c.WaitFinishRead.Add(two)
 
-	go stdCopy(stdout, rStdout, c.waitFinishRead)
-	go stdCopy(stderr, rStderr, c.waitFinishRead)
+	go stdCopy(stdout, rStdout, c.WaitFinishRead)
+	go stdCopy(stderr, rStderr, c.WaitFinishRead)
 
 	return c
 }
 
-func stopCapture(c *captureData) {
-	_ = c.writerStdout.Close()
-	_ = c.writerStderr.Close()
+func StopCapture(c *CaptureData) {
+	_ = c.WriterStdout.Close()
+	_ = c.WriterStderr.Close()
 
-	c.waitFinishRead.Wait()
+	c.WaitFinishRead.Wait()
 
-	os.Stdout = c.backupStdout
-	os.Stderr = c.backupStderr
+	os.Stdout = c.BackupStdout
+	os.Stderr = c.BackupStderr
 }

@@ -1,4 +1,4 @@
-package pbar
+package progress
 
 type NoOpProgress struct{}
 
